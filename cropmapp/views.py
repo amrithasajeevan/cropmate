@@ -373,9 +373,9 @@ class EquipmentUpdateDelete(APIView):
 
 #farmer/user registration
     
-class FarmerRegistrationView(APIView):
+class RegistrationView(APIView):
     def post(self, request):
-        serializer = FarmerRegistrationSerializer(data=request.data)
+        serializer = RegistrationSerializer(data=request.data)
         
         if serializer.is_valid():
             serializer.save()
@@ -385,16 +385,17 @@ class FarmerRegistrationView(APIView):
     def get(self,request):
         qs=CustomUser.objects.all()
         
-        a=FarmerRegistrationSerializer(qs,many=True)
+        a=RegistrationSerializer(qs,many=True)
         
         return Response(a.data)
+
+
+#login for farmer and user
     
 
-#login
-    
-class FarmerLoginView(APIView):
+class UnifiedLoginView(APIView):
     def post(self, request):
-        serializer = FarmerLoginSerializer(data=request.data)
+        serializer = UnifiedLoginSerializer(data=request.data)
 
         if serializer.is_valid():
             username = serializer.validated_data['username']
@@ -402,11 +403,49 @@ class FarmerLoginView(APIView):
 
             user = authenticate(request, username=username, password=password)
 
-            if user and user.user_type == 'Farmer':
+            if user:
                 login(request, user)
                 token, created = Token.objects.get_or_create(user=user)
-                return Response({'token': token.key,'msg': 'Login successful'}, status=status.HTTP_200_OK)
+                return Response({'token': token.key, 'msg': 'Login successful'}, status=status.HTTP_200_OK)
             else:
-                return Response({'msg': 'Invalid credentials or user type'}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'msg': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+            
+        
+#Scheme view by User/Farmer
+        
+class UserSchemeListView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = SchemeAdd.objects.all()
+        serializer = UserSchemeSerializer(qs, many=True)
+        return Response(serializer.data)
+    
+
+#view specific schema
+    
+class UserSchemeDetailView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            scheme = SchemeAdd.objects.get(id=pk)
+        except SchemeAdd.DoesNotExist:
+            return Response({"error": "Scheme not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserSchemeSerializer(scheme)
+        return Response(serializer.data)
+    
+#admin view all the user /farmer details
+    
+class UserListView(APIView):
+    def get(self, request, *args, **kwargs):
+        users = CustomUser.objects.filter(is_superuser=False)
+        serializer = RegistrationSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

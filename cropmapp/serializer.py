@@ -37,17 +37,18 @@ class EquipementAddSerializer(serializers.ModelSerializer):
 
 
 
-class FarmerRegistrationSerializer(serializers.ModelSerializer):
+class RegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'user_type', 'phone', 'address', 'location', 'password')
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        user_type = validated_data.get('user_type', 'User')
         user = CustomUser.objects.create(
             username=validated_data['username'],
             email=validated_data['email'],
-            user_type='Farmer',  # Set user_type to 'Farmer' for registration
+            user_type=user_type,  
             phone=validated_data['phone'],
             address=validated_data['address'],
             location=validated_data['location']
@@ -57,8 +58,7 @@ class FarmerRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
-
-class FarmerLoginSerializer(serializers.Serializer):
+class UnifiedLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
@@ -69,12 +69,17 @@ class FarmerLoginSerializer(serializers.Serializer):
         if username and password:
             user = authenticate(username=username, password=password)
 
-            if not user or user.user_type != 'Farmer':
-                raise serializers.ValidationError("Invalid credentials or user type")
+            if not user:
+                raise serializers.ValidationError("Invalid credentials")
 
         else:
             raise serializers.ValidationError("Both username and password are required")
 
         return data
 
-  
+
+
+class UserSchemeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchemeAdd
+        fields = ['id','scheme_name', 'start_age', 'end_age', 'description', 'link']
