@@ -83,3 +83,9 @@ class UserSchemeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SchemeAdd
         fields = ['id','scheme_name', 'start_age', 'end_age', 'description', 'link']
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = '__all__'

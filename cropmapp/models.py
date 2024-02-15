@@ -55,6 +55,31 @@ class EquipmentAdd(models.Model):
     qty=models.IntegerField(null=True, blank=True)
     description=models.CharField(max_length=1000,null=True, blank=True)
     is_available=models.BooleanField(default=True,null=True, blank=True) 
+    # def decrement_quantity(self, quantity):
+    #     if self.qty is not None:
+    #         self.qty -= quantity
+    #         self.save()
 
+
+class CartItem(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    brand = models.CharField(max_length=150, null=True, blank=True)
+    equipment_name = models.CharField(max_length=100, null=True, blank=True)
+    image = models.ImageField(upload_to='equipment/', null=True, blank=True)
+    price = models.FloatField(null=True, blank=True)
+    quantity = models.IntegerField(default=1)
+    description = models.CharField(max_length=1000, null=True, blank=True)
+
+    def __str__(self):
+        return self.equipment_name
+    
+    def update_quantity(self, quantity=None):
+        old_quantity = self.quantity
+        if quantity is not None:
+            self.quantity = quantity
+        else:
+            self.quantity += 1
+        self.price = self.price * (self.quantity / old_quantity)  # Adjust the price based on the new quantity
+        self.save()
 
     

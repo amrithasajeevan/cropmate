@@ -15,6 +15,8 @@ urlpatterns = [
     path('allschemeview/',UserSchemeListView.as_view()),
     path('schemes/<int:pk>/', UserSchemeDetailView.as_view(), name='user-scheme-detail'),
     path('usermanage/',UserListView.as_view()),
+    path('add-to-cart/', AddToCartAPIView.as_view(), name='add-to-cart'),
+    
     
 
     

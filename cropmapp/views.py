@@ -138,10 +138,18 @@ class SuperuserLoginView(APIView):
         user = authenticate(request, username=username, password=password)
 
         if user and user.is_superuser:
+            # Include superuser details in the response
+            superuser_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                
+            }
+
             # Using Django's Token model to generate a normal token
             token, created = Token.objects.get_or_create(user=user)
 
-            return Response({'token': token.key, 'message': "Logged in successfully"}, status=status.HTTP_200_OK)
+            return Response({'token': token.key, 'superuser': superuser_data, 'message': "Logged in successfully"}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials or user is not a superuser'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -406,11 +414,22 @@ class UnifiedLoginView(APIView):
             if user:
                 login(request, user)
                 token, created = Token.objects.get_or_create(user=user)
-                return Response({'token': token.key, 'msg': 'Login successful'}, status=status.HTTP_200_OK)
+
+                # Include user details in the response
+                user_data = {
+                    'username': user.username,
+                    'email': user.email,
+                    'user_type': user.user_type,  # Assuming user_type is a field in your CustomUser model
+                    'phone': user.phone,
+                    'address': user.address,
+                    'location': user.location,
+                }
+
+                return Response({'token': token.key, 'user': user_data, 'msg': 'Login successful'}, status=200)
             else:
-                return Response({'msg': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'msg': 'Invalid credentials'}, status=401)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=400)
     
 
             
@@ -449,3 +468,99 @@ class UserListView(APIView):
         users = CustomUser.objects.filter(is_superuser=False)
         serializer = RegistrationSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+class AddToCartAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            equipment_name = request.data.get('equipment_name')
+            quantity = int(request.data.get('quantity', 1))
+
+            equipment = EquipmentAdd.objects.get(eqipment_name=equipment_name)
+
+            # Check if the item is already in the cart for the specific user
+            cart_item, created = CartItem.objects.get_or_create(
+                user=user,
+                equipment_name=equipment.eqipment_name,
+                defaults={
+                    'brand': equipment.Brand,
+                    'image': equipment.image,
+                    'price': equipment.price,
+                    'quantity': 0,  # Set initial quantity to 0
+                    'description': equipment.description,
+                }
+            )
+
+            # If quantity is negative, decrement the quantity
+            if quantity < 0:
+                if cart_item.quantity + quantity <= 0:
+                    # If quantity becomes non-positive, remove the item from the cart
+                    cart_item.delete()
+                else:
+                    # Update quantity and price
+                    cart_item.quantity += quantity
+                    cart_item.price = equipment.price * cart_item.quantity
+                    cart_item.save()
+            else:
+                # Update quantity and price for positive quantity
+                cart_item.quantity += quantity
+                cart_item.price = equipment.price * cart_item.quantity
+                cart_item.save()
+
+            # Get all cart items
+            cart_items = CartItem.objects.filter(user=user)
+
+            # Create a list of items with names and quantities
+            items_list = [{'name': item.equipment_name, 'quantity': item.quantity} for item in cart_items]
+
+            # Calculate total sum of prices in the cart
+            total_price = sum(item.price for item in cart_items)
+            total_quantity_bought = sum(item.quantity for item in cart_items)
+
+            return Response({
+                'message': 'Item added to cart successfully.',
+                'items': items_list,
+                'total_price': total_price,
+                'total_quantity_bought': total_quantity_bought
+            }, status=status.HTTP_201_CREATED)
+
+        except EquipmentAdd.DoesNotExist:
+            return Response({'error': 'Equipment not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            cart_items = CartItem.objects.filter(user=user)
+
+            # Create a list of items with names, quantities, and additional details
+            items_list = [
+                {
+                    'name': item.equipment_name,
+                    'brand': item.brand,
+                    'image': str(item.image),
+                    'price': item.price,
+                    'quantity': item.quantity,
+                    'description': item.description,
+                }
+                for item in cart_items
+            ]
+
+            # Calculate total sum of prices in the cart
+            total_price = sum(item.price for item in cart_items)
+            total_quantity_bought = sum(item.quantity for item in cart_items)
+
+            return Response({
+                'items': items_list,
+                'total_price': total_price,
+                'total_quantity_bought': total_quantity_bought
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
