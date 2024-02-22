@@ -89,3 +89,16 @@ class CartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = '__all__'
+
+
+class UploadImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedImage
+        fields = '__all__'
+
+
+
+class EquipmentViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EquipmentAdd
+        fields = ['id','Brand', 'eqipment_name', 'image', 'price', 'qty', 'description', 'is_available']

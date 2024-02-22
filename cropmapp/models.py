@@ -82,4 +82,6 @@ class CartItem(models.Model):
         self.price = self.price * (self.quantity / old_quantity)  # Adjust the price based on the new quantity
         self.save()
 
-    
+
+class UploadedImage(models.Model):
+    image = models.ImageField(upload_to='uploads/')

@@ -1,0 +1,33 @@
+0 Apple Scab
+1 Apple Black rot
+2 Apple Cedar Apple rust
+3 Apple Healthy
+4 Cherry healthy
+5 Cherry Including Sour Powdery Mildew
+6 Corn Cercospora Leaf Spot Gray leaf spot
+7 Corn Common rust
+8 Corn Healthy
+9 Corn Northern Leaf Blight
+10 Grape Black rot
+11 Grape Esca (Black Measles)
+12 Grape Healthy
+13 Grape Leaf Blight (Isariopsis Leaf Spot)
+14 Peach Bacterial Spot
+15 Peach Healthy
+16 Pepper Bell Bacterial Spot
+17 Pepper Bell Healthy
+18 Potato Early Blight
+19 Potato Healthy
+20 Potato Late Blight
+21 Strawberry Healthy
+22 Strawberry Leaf Scorch
+23 Tomato Bacterial Spot
+24 Tomato Early Blight
+25 Tomato Healthy
+26 Tomato Late Blight
+27 Tomato Leaf Mold
+28 Tomato Septoria Leaf Spot
+29 Tomato Spider Mites Two Spotted Spider Mite
+30 Tomato Target Spot
+31 Tomato Mosaic Virus
+32 Tomato Yellow Leaf Curl Virus
