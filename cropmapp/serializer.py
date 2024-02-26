@@ -102,3 +102,52 @@ class EquipmentViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = EquipmentAdd
         fields = ['id','Brand', 'eqipment_name', 'image', 'price', 'qty', 'description', 'is_available']
+
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    equipment_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+    def get_equipment_details(self, instance):
+        equipment_names = instance.equipment_names
+        quantities = instance.quantities
+        prices = instance.prices
+
+        equipment_details = []
+        for name, quantity, price in zip(equipment_names, quantities, prices):
+            equipment_details.append({
+                "name": name,
+                "quantity": quantity,
+                "price": price,
+            })
+
+        return equipment_details
+
+        
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        representation['equipment_details'] = self.get_equipment_details(instance)
+
+        # Any additional formatting for other fields can be done here if needed
+        return representation
+    
+
+# class FarmerProductSerializer(serializers.ModelSerializer):
+#     posted_by = RegistrationSerializer()
+
+#     class Meta:
+#         model = FarmerProduct
+#         fields = ['id', 'posted_by', 'crop_type', 'crop_name', 'image', 'price', 'quantity', 'description', 'is_available']
+
+#     def create(self, validated_data):
+#         posted_by_data = validated_data.pop('posted_by')
+#         posted_by_instance, created = CustomUser.objects.get_or_create(**posted_by_data)
+#         validated_data['posted_by'] = posted_by_instance
+#         validated_data['posted_by'] = self.context['request'].user
+#         return FarmerProduct.objects.create(**validated_data)

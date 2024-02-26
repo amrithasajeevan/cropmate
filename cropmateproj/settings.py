@@ -132,6 +132,7 @@ REST_FRAMEWORK = {
         
         'rest_framework.authentication.TokenAuthentication',
     ],
+    
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -148,3 +149,7 @@ MEDIA_URL='/media/'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+
+RAZORPAY_API_KEY ='rzp_test_dGbzyUivWJNxDV'
+RAZORPAY_API_SECRET='4iYJQWiT6WT7xYcl1JdHSD3a'

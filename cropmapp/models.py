@@ -60,7 +60,7 @@ class EquipmentAdd(models.Model):
     #         self.qty -= quantity
     #         self.save()
 
-
+#equipment cart
 class CartItem(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     brand = models.CharField(max_length=150, null=True, blank=True)
@@ -85,3 +85,68 @@ class CartItem(models.Model):
 
 class UploadedImage(models.Model):
     image = models.ImageField(upload_to='uploads/')
+
+
+
+
+# class Order(models.Model):
+#     username = models.ForeignKey(CustomUser, on_delete=models.CASCADE,blank=True, null=True)
+#     address = models.CharField(max_length=1000,blank=True, null=True)
+#     ordered_items = models.ManyToManyField(CartItem, blank=True,default=None) # Assuming each order can have multiple items
+#     total = models.FloatField()
+#     order_date = models.DateTimeField(auto_now_add=True)
+#     estimated_date = models.DateField(blank=True, null=True)  
+#     razorpay_order_id = models.CharField(max_length=255, blank=True, null=True)  # Add this field for razorpay_order_id
+#     status_options = (
+#         ("order-placed", "order-placed"),
+#         ("cancelled", "cancelled"),
+        
+#     )
+#     status = models.CharField(max_length=200, choices=status_options, default="order-placed")
+
+#     def __str__(self):
+#         return f"Order #{self.id} - {self.username}"
+    
+#equipment order
+
+class Order(models.Model):
+    username = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
+    address = models.CharField(max_length=1000, blank=True, null=True)
+    
+    # Fields to store details of ordered items
+    equipment_names = models.TextField(null=True, blank=True)
+    quantities = models.TextField(null=True, blank=True)
+    prices = models.TextField(null=True, blank=True)
+
+    total = models.FloatField()
+    order_date = models.DateTimeField(auto_now_add=True)
+    estimated_date = models.DateField(blank=True, null=True)
+    razorpay_order_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    status_options = (
+        ("order-placed", "order-placed"),
+        ("cancelled", "cancelled"),
+    )
+    status = models.CharField(max_length=200, choices=status_options, default="order-placed")
+
+
+
+class FarmerProduct(models.Model):
+    posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
+    
+    CROP_CHOICES = [
+        ("Vegetables", "Vegetables"),
+        ("Fruits", "Fruits"),
+        ("Grains", "Grains"),
+    ]
+    crop_type = models.CharField(max_length=200, choices=CROP_CHOICES, default="Vegetables")
+    
+    crop_name = models.CharField(max_length=500,blank=True, null=True)
+    image = models.ImageField(upload_to='product_images/',blank=True, null=True)  # Assuming you want to store product images
+    price = models.FloatField(null=True, blank=True)
+    quantity = models.IntegerField(null=True, blank=True)  # Assuming quantity is in grams
+    description = models.TextField(null=True, blank=True)
+    is_available = models.BooleanField(default=True,null=True, blank=True)
+
+    def __str__(self):
+        return self.crop_name

@@ -582,3 +582,83 @@ class AddToCartAPIView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+import razorpay
+from django.db import transaction
+from django.conf import settings
+from django.http import JsonResponse
+from datetime import datetime, timedelta
+from django.utils import timezone
+
+
+class OrderCreateAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def create_razorpay_order(self, total_amount):
+        client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
+        data = {
+            'amount': int(total_amount * 100),
+            'currency': 'INR',
+            'payment_capture': 1
+        }
+        order = client.order.create(data=data)
+        razorpay_order_id = order.get('id')
+        return razorpay_order_id
+
+    def post(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                user = request.user
+                address = request.data.get('address', '')
+                cart_items = CartItem.objects.filter(user=user)
+
+                equipment_names = []
+                quantities = []
+                prices = []
+                total_price = 0.0
+
+                for cart_item in cart_items:
+                    equipment_names.append(cart_item.equipment_name)
+                    quantities.append(cart_item.quantity)
+                    prices.append(cart_item.price)
+                    total_price += cart_item.price
+
+                order_date = timezone.now()
+                estimated_date = (order_date + timedelta(days=10)).date()
+
+                order = Order.objects.create(
+                    username=user,
+                    address=address,
+                    equipment_names=equipment_names,
+                    quantities=quantities,
+                    prices=prices,
+                    total=total_price,
+                    order_date=order_date,
+                    estimated_date=estimated_date,
+                )
+
+                cart_items.delete()
+
+                razorpay_order_id = self.create_razorpay_order(total_price)
+
+                order.razorpay_order_id = razorpay_order_id
+                order.save()
+
+                order_serializer = OrderSerializer(order)
+                order_data = order_serializer.data
+
+                order_data.pop('equipment_names', None)
+                order_data.pop('quantities', None)
+                order_data.pop('prices', None)
+
+                return Response(order_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+
+        
