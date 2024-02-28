@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /cropmapp/add-to-cart/:
+    get:
+      operationId: cropmapp_add_to_cart_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cropmapp_add_to_cart_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/allschemeview/:
+    get:
+      operationId: cropmapp_allschemeview_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/create-order/:
+    get:
+      operationId: cropmapp_create_order_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cropmapp_create_order_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/crop-recommendation/:
+    post:
+      operationId: cropmapp_crop_recommendation_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/equipment/:
+    get:
+      operationId: cropmapp_equipment_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/equipment/{id}/:
+    get:
+      operationId: cropmapp_equipment_retrieve_2
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/equipmentadd/:
+    get:
+      operationId: cropmapp_equipmentadd_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cropmapp_equipmentadd_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/equipmentupdate/{id}:
+    get:
+      operationId: cropmapp_equipmentupdate_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: cropmapp_equipmentupdate_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: cropmapp_equipmentupdate_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /cropmapp/farmerproducts/:
+    get:
+      operationId: cropmapp_farmerproducts_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cropmapp_farmerproducts_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/forgot-password/:
+    post:
+      operationId: cropmapp_forgot_password_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/login/:
+    post:
+      operationId: cropmapp_login_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/predict/:
+    post:
+      operationId: cropmapp_predict_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/register/:
+    get:
+      operationId: cropmapp_register_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cropmapp_register_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/reset-password/:
+    post:
+      operationId: cropmapp_reset_password_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/schemes/{id}/:
+    get:
+      operationId: cropmapp_schemes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/schemesadd/:
+    get:
+      operationId: cropmapp_schemesadd_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cropmapp_schemesadd_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/schemeupdate/{id}:
+    get:
+      operationId: cropmapp_schemeupdate_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: cropmapp_schemeupdate_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: cropmapp_schemeupdate_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /cropmapp/superuser-login/:
+    post:
+      operationId: cropmapp_superuser_login_create
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /cropmapp/usermanage/:
+    get:
+      operationId: cropmapp_usermanage_retrieve
+      tags:
+      - cropmapp
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+components:
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

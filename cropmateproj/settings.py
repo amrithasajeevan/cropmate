@@ -39,7 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cropmapp',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
+    'tensorflow',
+    'drf_spectacular'
 ]
 
 MIDDLEWARE = [
@@ -132,6 +134,7 @@ REST_FRAMEWORK = {
         
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_SCHEMA_CLASS':'drf_spectacular.openapi.AutoSchema'
     
 }
 
@@ -151,5 +154,3 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
-RAZORPAY_API_KEY ='rzp_test_dGbzyUivWJNxDV'
-RAZORPAY_API_SECRET='4iYJQWiT6WT7xYcl1JdHSD3a'

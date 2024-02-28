@@ -117,37 +117,59 @@ class OrderSerializer(serializers.ModelSerializer):
         quantities = instance.quantities
         prices = instance.prices
 
+        if equipment_names is None or quantities is None or prices is None:
+            return []
+
+        equipment_names = equipment_names.strip('[]').split(', ')
+        quantities = quantities.strip('[]').split(', ')
+        prices = prices.strip('[]').split(', ')
+
         equipment_details = []
+
         for name, quantity, price in zip(equipment_names, quantities, prices):
             equipment_details.append({
-                "name": name,
-                "quantity": quantity,
-                "price": price,
+                "name": name.strip("'"),
+                "quantity": quantity.strip("' "),
+                "price": price.strip("' "),
             })
 
         return equipment_details
 
-        
-
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        representation['equipment_details'] = self.get_equipment_details(instance)
+        representation.pop('equipment_names', None)
+        representation.pop('quantities', None)
+        representation.pop('prices', None)
 
-        # Any additional formatting for other fields can be done here if needed
-        return representation
+        response_data = {
+            "status": 1,
+            "data": representation
+        }
+        if instance.status == 'error':
+            response_data["status"] = 0
+        return response_data
+
+
+
+
+
     
 
-# class FarmerProductSerializer(serializers.ModelSerializer):
-#     posted_by = RegistrationSerializer()
+class FarmerProductSerializer(serializers.ModelSerializer):
+    posted_by = RegistrationSerializer(read_only=True)
 
-#     class Meta:
-#         model = FarmerProduct
-#         fields = ['id', 'posted_by', 'crop_type', 'crop_name', 'image', 'price', 'quantity', 'description', 'is_available']
+    class Meta:
+        model = FarmerProduct
+        fields = '__all__'
 
-#     def create(self, validated_data):
-#         posted_by_data = validated_data.pop('posted_by')
-#         posted_by_instance, created = CustomUser.objects.get_or_create(**posted_by_data)
-#         validated_data['posted_by'] = posted_by_instance
-#         validated_data['posted_by'] = self.context['request'].user
-#         return FarmerProduct.objects.create(**validated_data)
+    def create(self, validated_data):
+        posted_by_name = validated_data.pop('posted_by', None)
+
+        # Fetch or create the CustomUser instance based on the provided name
+        posted_by, created = CustomUser.objects.get_or_create(username=posted_by_name)
+
+        # Set the created_by field to the fetched or created CustomUser instance
+        validated_data['posted_by'] = posted_by
+
+        return super().create(validated_data)

@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from rest_framework import generics
-# Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -435,6 +434,7 @@ class UnifiedLoginView(APIView):
 
                 # Include user details in the response
                 user_data = {
+                    "id":user.id,
                     'username': user.username,
                     'email': user.email,
                     'user_type': user.user_type,  # Assuming user_type is a field in your CustomUser model
@@ -583,7 +583,7 @@ class AddToCartAPIView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-import razorpay
+# import razorpay
 from django.db import transaction
 from django.conf import settings
 from django.http import JsonResponse
@@ -595,16 +595,18 @@ class OrderCreateAPIView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def create_razorpay_order(self, total_amount):
-        client = razorpay.Client(auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
-        data = {
-            'amount': int(total_amount * 100),
-            'currency': 'INR',
-            'payment_capture': 1
-        }
-        order = client.order.create(data=data)
-        razorpay_order_id = order.get('id')
-        return razorpay_order_id
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            orders = Order.objects.filter(username=user)
+
+            print("DEBUG: orders:", orders)
+
+            serializer = OrderSerializer(orders, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request, *args, **kwargs):
         try:
@@ -627,38 +629,78 @@ class OrderCreateAPIView(APIView):
                 order_date = timezone.now()
                 estimated_date = (order_date + timedelta(days=10)).date()
 
+                # Convert lists to strings with appropriate format
+                equipment_names_str = str(equipment_names)
+                quantities_str = str(quantities)
+                prices_str = str(prices)
+
                 order = Order.objects.create(
                     username=user,
                     address=address,
-                    equipment_names=equipment_names,
-                    quantities=quantities,
-                    prices=prices,
+                    equipment_names=equipment_names_str,
+                    quantities=quantities_str,
+                    prices=prices_str,
                     total=total_price,
                     order_date=order_date,
                     estimated_date=estimated_date,
+
                 )
 
                 cart_items.delete()
 
-                razorpay_order_id = self.create_razorpay_order(total_price)
-
-                order.razorpay_order_id = razorpay_order_id
-                order.save()
-
                 order_serializer = OrderSerializer(order)
                 order_data = order_serializer.data
-
-                order_data.pop('equipment_names', None)
-                order_data.pop('quantities', None)
-                order_data.pop('prices', None)
 
                 return Response(order_data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
 
+class FarmerProductAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
+    def get_object(self, pk):
+        try:
+            return FarmerProduct.objects.get(pk=pk)
+        except FarmerProduct.DoesNotExist:
+            return None
 
-        
+    def get(self, request, format=None):
+        products = FarmerProduct.objects.all()
+        serializer = FarmerProductSerializer(products, many=True)
+        response_data = {"status": 1, "data": serializer.data}
+        return Response(response_data)
+
+    def post(self, request, format=None):
+        # Extract posted_by from request data
+        posted_by_name = request.data.get('posted_by')
+        print(f"posted_by_name: {posted_by_name}")
+
+        # Get the authenticated user
+        user = self.request.user
+        print(f"posted_by_name: {posted_by_name}")
+
+        # Check if the user is a farmer
+        if user.user_type == 'Farmer':
+            # Set the posted_by field to the authenticated user or the specified username
+            posted_by = user if not posted_by_name else CustomUser.objects.get_or_create(username=posted_by_name)[0]
+
+            # Add posted_by to request data
+            request.data['posted_by'] = posted_by.username
+        else:
+            # Handle the case where the user is not a farmer (you may want to return an error response)
+            response_data = {"status": 0, "errors": {"posted_by": ["Only farmers can upload farm products."]}}
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = FarmerProductSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()  # This will call perform_create in the serializer
+
+            response_data = {"status": 1, "data": serializer.data}
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        response_data = {"status": 0, "errors": serializer.errors}
+        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)

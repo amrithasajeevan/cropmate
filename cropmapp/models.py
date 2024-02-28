@@ -121,7 +121,7 @@ class Order(models.Model):
     total = models.FloatField()
     order_date = models.DateTimeField(auto_now_add=True)
     estimated_date = models.DateField(blank=True, null=True)
-    razorpay_order_id = models.CharField(max_length=255, blank=True, null=True)
+    
     
     status_options = (
         ("order-placed", "order-placed"),
