@@ -131,22 +131,92 @@ class Order(models.Model):
 
 
 
-class FarmerProduct(models.Model):
-    posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
+# class FarmerProduct(models.Model):
+#     posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=True, null=True)
     
+#     CROP_CHOICES = [
+#         ("Vegetables", "Vegetables"),
+#         ("Fruits", "Fruits"),
+#         ("Grains", "Grains"),
+#     ]
+#     crop_type = models.CharField(max_length=200, choices=CROP_CHOICES, default="Vegetables")
+    
+#     crop_name = models.CharField(max_length=500,blank=True, null=True)
+#     image = models.ImageField(upload_to='product_images/',blank=True, null=True)  # Assuming you want to store product images
+#     price = models.FloatField(null=True, blank=True)
+#     quantity = models.IntegerField(null=True, blank=True)  # Assuming quantity is in grams
+#     description = models.TextField(null=True, blank=True)
+#     is_available = models.BooleanField(default=True,null=True, blank=True)
+
+#     def __str__(self):
+#         return self.crop_name
+
+
+class FarmProducts(models.Model):
+    posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     CROP_CHOICES = [
         ("Vegetables", "Vegetables"),
         ("Fruits", "Fruits"),
         ("Grains", "Grains"),
     ]
     crop_type = models.CharField(max_length=200, choices=CROP_CHOICES, default="Vegetables")
-    
     crop_name = models.CharField(max_length=500,blank=True, null=True)
-    image = models.ImageField(upload_to='product_images/',blank=True, null=True)  # Assuming you want to store product images
+    image = models.ImageField(upload_to='crop_images/',blank=True, null=True)
     price = models.FloatField(null=True, blank=True)
-    quantity = models.IntegerField(null=True, blank=True)  # Assuming quantity is in grams
+    quantity = models.IntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     is_available = models.BooleanField(default=True,null=True, blank=True)
 
-    def __str__(self):
-        return self.crop_name
+
+class FarmCart(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    posted_by = models.CharField(max_length=150, null=True, blank=True)
+    crop_name = models.CharField(max_length=100, null=True, blank=True)
+    image = models.ImageField(upload_to='equipment/', null=True, blank=True)
+    price = models.FloatField()
+    quantity = models.IntegerField(default=1)
+    description = models.CharField(max_length=1000, null=True, blank=True)
+    
+    def update_quantity(self, quantity=None):
+        old_quantity = self.quantity
+        if quantity is not None:
+            self.quantity = quantity
+        else:
+            self.quantity += 1
+        self.price = self.price * (self.quantity / old_quantity)  # Adjust the price based on the new quantity
+        self.save()
+
+
+class FarmOrder(models.Model):
+    username = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    address = models.CharField(max_length=1000)
+    
+    # Fields to store details of ordered items
+    crop_names = models.TextField(null=True, blank=True)
+    quantities = models.TextField(null=True, blank=True)
+    prices = models.TextField(null=True, blank=True)
+
+    total = models.FloatField()
+    order_date = models.DateTimeField(auto_now_add=True)
+    estimated_date = models.DateField(blank=True, null=True)
+    
+    
+    status_options = (
+        ("order-placed", "order-placed"),
+        ("cancelled", "cancelled"),
+    )
+    status = models.CharField(max_length=200, choices=status_options, default="order-placed")
+
+
+class FarmOrderFeedback(models.Model):
+    order = models.ForeignKey(FarmOrder, on_delete=models.CASCADE)
+    username = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    feedback = models.CharField(max_length=100)
+    date_posted=models.DateTimeField(auto_now_add=True)
+
+
+class OrderFeedback(models.Model):
+    order = models.ForeignKey(Order,on_delete=models.CASCADE)
+    username = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    feedback = models.CharField(max_length=100)
+    date_posted=models.DateTimeField(auto_now_add=True)

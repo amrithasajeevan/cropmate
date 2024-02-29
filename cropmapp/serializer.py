@@ -151,25 +151,121 @@ class OrderSerializer(serializers.ModelSerializer):
         return response_data
 
 
-
-
-
     
 
-class FarmerProductSerializer(serializers.ModelSerializer):
-    posted_by = RegistrationSerializer(read_only=True)
+class FarmProductsSerializer(serializers.ModelSerializer):
+    posted_by = serializers.CharField(write_only=True)
 
     class Meta:
-        model = FarmerProduct
-        fields = '__all__'
+        model = FarmProducts
+        fields = ('id', 'posted_by', 'crop_type', 'crop_name', 'image', 'price', 'quantity', 'description', 'is_available')
+
+    def validate_posted_by(self, value):
+        try:
+            user = CustomUser.objects.get(username=value)
+            return user
+        except CustomUser.DoesNotExist:
+            raise serializers.ValidationError(f"User with username '{value}' does not exist.")
 
     def create(self, validated_data):
-        posted_by_name = validated_data.pop('posted_by', None)
+        posted_by_username = validated_data.pop('posted_by')
+        posted_by = CustomUser.objects.get(username=posted_by_username)
+        farm_product = FarmProducts.objects.create(posted_by=posted_by, **validated_data)
+        return farm_product
 
-        # Fetch or create the CustomUser instance based on the provided name
-        posted_by, created = CustomUser.objects.get_or_create(username=posted_by_name)
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['posted_by'] = instance.posted_by.username if instance.posted_by else None
+        return {'status': 1, 'data': representation}
+    
 
-        # Set the created_by field to the fetched or created CustomUser instance
-        validated_data['posted_by'] = posted_by
 
-        return super().create(validated_data)
+
+class FarmCartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FarmCart
+        fields = '__all__'
+
+
+class FarmOrderSerializer(serializers.ModelSerializer):
+    crop_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FarmOrder
+        fields = '__all__'
+
+    def get_crop_details(self, instance):
+        crop_names = instance.crop_names
+        quantities = instance.quantities
+        prices = instance.prices
+
+        if crop_names is None or quantities is None or prices is None:
+            return []
+
+        crop_names = crop_names.strip('[]').split(', ')
+        quantities = quantities.strip('[]').split(', ')
+        prices = prices.strip('[]').split(', ')
+
+        crop_details = []
+
+        for name, quantity, price in zip(crop_names, quantities, prices):
+            crop_details.append({
+                "name": name.strip("'"),
+                "quantity": quantity.strip("' "),
+                "price": price.strip("' "),
+            })
+
+        return crop_details
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        representation.pop('crop_names', None)
+        representation.pop('quantities', None)
+        representation.pop('prices', None)
+
+        response_data = {
+            "status": 1,
+            "data": representation
+        }
+        if instance.status == 'cancelled':
+            response_data["status"] = 0
+        return response_data
+    
+
+class FarmOrderFeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FarmOrderFeedback
+        fields = ['id','order', 'username', 'feedback', 'date_posted']
+
+    # Use a CharField for username
+    username = serializers.CharField()
+    def create(self, validated_data):
+        # Get or create a CustomUser instance based on the provided username
+        username = validated_data.pop('username')
+        custom_user, created = CustomUser.objects.get_or_create(username=username)
+        
+        # Assign the CustomUser instance to the username field
+        validated_data['username'] = custom_user
+        
+        # Create and return the FarmOrderFeedback instance
+        return FarmOrderFeedback.objects.create(**validated_data)
+    
+
+class  OrderFeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderFeedback
+        fields = ['id','order','username', 'feedback', 'date_posted']
+
+    # Use a CharField for username
+    username = serializers.CharField()
+    def create(self, validated_data):
+        # Get or create a CustomUser instance based on the provided username
+        username = validated_data.pop('username')
+        custom_user, created = CustomUser.objects.get_or_create(username=username)
+        
+        # Assign the CustomUser instance to the username field
+        validated_data['username'] = custom_user
+        
+        # Create and return the FarmOrderFeedback instance
+        return  OrderFeedback.objects.create(**validated_data)

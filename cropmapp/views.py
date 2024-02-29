@@ -657,50 +657,283 @@ class OrderCreateAPIView(APIView):
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class FarmerProductAPIView(APIView):
+class FarmProductsListCreateView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Ensure posted_by is set to the user ID based on the provided username
+        serializer = FarmProductsSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            response_data = {'status': 1, 'data': serializer.data}
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        response_data = {'status': 0, 'errors': serializer.errors}
+        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        qs = FarmProducts.objects.all()
+        serializer = FarmProductsSerializer(qs, many=True)
+        response_data = {'status': 1, 'data': serializer.data}
+        return Response(response_data)
+
+from django.shortcuts import get_object_or_404    
+
+class FarmProductsRetrieveUpdateDeleteView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
-        try:
-            return FarmerProduct.objects.get(pk=pk)
-        except FarmerProduct.DoesNotExist:
-            return None
+        return get_object_or_404(FarmProducts, pk=pk)
 
-    def get(self, request, format=None):
-        products = FarmerProduct.objects.all()
-        serializer = FarmerProductSerializer(products, many=True)
-        response_data = {"status": 1, "data": serializer.data}
+    def get(self, request, pk):
+        farm_product = self.get_object(pk)
+        serializer = FarmProductsSerializer(farm_product)
+        response_data = {'status': 1, 'data': serializer.data}
         return Response(response_data)
 
-    def post(self, request, format=None):
-        # Extract posted_by from request data
-        posted_by_name = request.data.get('posted_by')
-        print(f"posted_by_name: {posted_by_name}")
-
-        # Get the authenticated user
-        user = self.request.user
-        print(f"posted_by_name: {posted_by_name}")
-
-        # Check if the user is a farmer
-        if user.user_type == 'Farmer':
-            # Set the posted_by field to the authenticated user or the specified username
-            posted_by = user if not posted_by_name else CustomUser.objects.get_or_create(username=posted_by_name)[0]
-
-            # Add posted_by to request data
-            request.data['posted_by'] = posted_by.username
-        else:
-            # Handle the case where the user is not a farmer (you may want to return an error response)
-            response_data = {"status": 0, "errors": {"posted_by": ["Only farmers can upload farm products."]}}
-            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = FarmerProductSerializer(data=request.data)
+    def put(self, request, pk):
+        farm_product = self.get_object(pk)
+        serializer = FarmProductsSerializer(farm_product, data=request.data)
 
         if serializer.is_valid():
-            serializer.save()  # This will call perform_create in the serializer
+            serializer.save()
+            response_data = {'status': 1, 'data': serializer.data}
+            return Response(response_data)
 
-            response_data = {"status": 1, "data": serializer.data}
+        response_data = {'status': 0, 'errors': serializer.errors}
+        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        farm_product = self.get_object(pk)
+        farm_product.delete()
+        return Response({'status': 1, 'message': 'Farm product deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+class FarmCartAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            crop_name = request.data.get('crop_name')
+            quantity = int(request.data.get('quantity', 1))
+
+            farm_product = FarmProducts.objects.get(crop_name=crop_name)
+
+            # Check if the item is already in the cart for the specific user
+            cart_item, created = FarmCart.objects.get_or_create(
+                user=user,
+                crop_name=farm_product.crop_name,
+                defaults={
+                    'posted_by': farm_product.posted_by.username,
+                    'image': farm_product.image,
+                    'price': farm_product.price,
+                    'quantity': 0,  # Set initial quantity to 0
+                    'description': farm_product.description,
+                }
+            )
+
+            # If quantity is negative, decrement the quantity
+            if quantity < 0:
+                if cart_item.quantity + quantity <= 0:
+                    # If quantity becomes non-positive, remove the item from the cart
+                    cart_item.delete()
+                else:
+                    # Update quantity and price
+                    cart_item.quantity += quantity
+                    cart_item.price = farm_product.price * cart_item.quantity
+                    cart_item.save()
+            else:
+                # Update quantity and price for positive quantity
+                cart_item.quantity += quantity
+                cart_item.price = farm_product.price * cart_item.quantity
+                cart_item.save()
+
+            # Get all cart items
+            cart_items = FarmCart.objects.filter(user=user)
+
+            # Create a list of items with names and quantities
+            items_list = [{'name': item.crop_name, 'quantity': item.quantity} for item in cart_items]
+
+            # Calculate total sum of prices in the cart
+            total_price = sum(item.price for item in cart_items)
+            total_quantity_bought = sum(item.quantity for item in cart_items)
+
+            response_data = {
+                'status': 1,  # Status 1 indicates success
+                'message': 'Item added to cart successfully.',
+                'items': items_list,
+                'total_price': total_price,
+                'total_quantity_bought': total_quantity_bought
+            }
+
             return Response(response_data, status=status.HTTP_201_CREATED)
 
-        response_data = {"status": 0, "errors": serializer.errors}
-        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        except FarmProducts.DoesNotExist:
+            response_data = {'status': 0, 'error': 'FarmProduct not found.'}
+            return Response(response_data, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            response_data = {'status': 0, 'error': str(e)}
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            cart_items = FarmCart.objects.filter(user=user)
+
+            # Create a list of items with names, quantities, and additional details
+            items_list = [
+                {
+                    'name': item.crop_name,
+                    'posted_by': item.posted_by,
+                    'image': str(item.image),
+                    'price': item.price,
+                    'quantity': item.quantity,
+                    'description': item.description,
+                }
+                for item in cart_items
+            ]
+
+            # Calculate total sum of prices in the cart
+            total_price = sum(item.price for item in cart_items)
+            total_quantity_bought = sum(item.quantity for item in cart_items)
+
+            response_data = {
+                'status': 1,  # Status 1 indicates success
+                'items': items_list,
+                'total_price': total_price,
+                'total_quantity_bought': total_quantity_bought
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            response_data = {'status': 0, 'error': str(e)}
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+
+class FarmOrderCreateAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            farm_orders = FarmOrder.objects.filter(username=user)
+
+            serializer = FarmOrderSerializer(farm_orders, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                user = request.user
+                address = request.data.get('address', '')
+                cart_items = FarmCart.objects.filter(user=user)
+
+                crop_names = []
+                quantities = []
+                prices = []
+                total_price = 0.0
+
+                for cart_item in cart_items:
+                    crop_names.append(cart_item.crop_name)
+                    quantities.append(cart_item.quantity)
+                    prices.append(cart_item.price)
+                    total_price += cart_item.price
+
+                order_date = timezone.now()
+                estimated_date = (order_date + timedelta(days=10)).date()
+
+                # Convert lists to strings with appropriate format
+                crop_names_str = str(crop_names)
+                quantities_str = str(quantities)
+                prices_str = str(prices)
+
+                farm_order = FarmOrder.objects.create(
+                    username=user,
+                    address=address,
+                    crop_names=crop_names_str,
+                    quantities=quantities_str,
+                    prices=prices_str,
+                    total=total_price,
+                    order_date=order_date,
+                    estimated_date=estimated_date,
+                )
+
+                cart_items.delete()
+
+                farm_order_serializer = FarmOrderSerializer(farm_order)
+                farm_order_data = farm_order_serializer.data
+
+                return Response(farm_order_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class FarmOrderFeedbackAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        farm_order_feedbacks = FarmOrderFeedback.objects.all()
+        serializer = FarmOrderFeedbackSerializer(farm_order_feedbacks, many=True)
+        data = {
+            'status': 1,
+            'data': serializer.data
+        }
+        return Response(data)
+
+    def post(self, request, *args, **kwargs):
+        mutable_data = request.data.copy()  # Make a copy to make it mutable
+        serializer = FarmOrderFeedbackSerializer(data=mutable_data)
+
+        if serializer.is_valid():
+            serializer.save()
+            data = {
+                'status': 1,
+                'data': serializer.data
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
+        data = {
+            'status': 0,
+            'errors': serializer.errors
+        }
+        return Response(data, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class  OrderFeedbackAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        order_feedbacks = OrderFeedback.objects.all()
+        serializer = OrderFeedbackSerializer(order_feedbacks, many=True)
+        data = {
+            'status': 1,
+            'data': serializer.data
+        }
+        return Response(data)
+
+    def post(self, request, *args, **kwargs):
+        mutable_data = request.data.copy()  # Make a copy to make it mutable
+        serializer = OrderFeedbackSerializer(data=mutable_data)
+
+        if serializer.is_valid():
+            serializer.save()
+            data = {
+                'status': 1,
+                'data': serializer.data
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
+        data = {
+            'status': 0,
+            'errors': serializer.errors
+        }
+        return Response(data, status=status.HTTP_400_BAD_REQUEST)
