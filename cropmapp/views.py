@@ -910,6 +910,52 @@ class FarmOrderFeedbackAPIView(APIView):
         return Response(data, status=status.HTTP_400_BAD_REQUEST)
     
 
+class FarmOrderFeedbackDetailAPIView(APIView):
+    def get(self, request, pk, *args, **kwargs):
+        farm_order_feedback = get_object_or_404(FarmOrderFeedback, pk=pk)
+        serializer = FarmOrderFeedbackSerializer(farm_order_feedback)
+        data = {
+            'status': 1,
+            'data': serializer.data
+        }
+        return Response(data)
+
+    def put(self, request, pk, *args, **kwargs):
+        farm_order_feedback = get_object_or_404(FarmOrderFeedback, pk=pk)
+        mutable_data = request.data.copy()
+
+        # Handle updating the username if provided
+        username = mutable_data.pop('username', None)
+        if username:
+            custom_user, created = CustomUser.objects.get_or_create(username=username)
+            farm_order_feedback.username = custom_user
+
+        serializer = FarmOrderFeedbackSerializer(farm_order_feedback, data=mutable_data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            data = {
+                'status': 1,
+                'data': serializer.data
+            }
+            return Response(data)
+        
+        data = {
+            'status': 0,
+            'errors': serializer.errors
+        }
+        return Response(data, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, *args, **kwargs):
+        farm_order_feedback = get_object_or_404(FarmOrderFeedback, pk=pk)
+        farm_order_feedback.delete()
+        data = {
+            'status': 1,
+            'message': 'FarmOrderFeedback deleted successfully.'
+        }
+        return Response(data, status=status.HTTP_204_NO_CONTENT)
+    
+
 
 class  OrderFeedbackAPIView(APIView):
     def get(self, request, *args, **kwargs):
@@ -937,3 +983,50 @@ class  OrderFeedbackAPIView(APIView):
             'errors': serializer.errors
         }
         return Response(data, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class OrderFeedbackDetailAPIView(APIView):
+    def get(self, request, pk, *args, **kwargs):
+        order_feedback = get_object_or_404(OrderFeedback, pk=pk)
+        serializer = OrderFeedbackSerializer(order_feedback)
+        data = {
+            'status': 1,
+            'data': serializer.data
+        }
+        return Response(data)
+
+    def put(self, request, pk, *args, **kwargs):
+        order_feedback = get_object_or_404(OrderFeedback, pk=pk)
+        mutable_data = request.data.copy()
+
+        # Handle updating the username if provided
+        username = mutable_data.pop('username', None)
+        if username:
+            custom_user, created = CustomUser.objects.get_or_create(username=username)
+            order_feedback.username = custom_user
+
+        serializer = OrderFeedbackSerializer(order_feedback, data=mutable_data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            data = {
+                'status': 1,
+                'data': serializer.data
+            }
+            return Response(data)
+        
+        data = {
+            'status': 0,
+            'errors': serializer.errors
+        }
+        return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, *args, **kwargs):
+        order_feedback = get_object_or_404(OrderFeedback, pk=pk)
+        order_feedback.delete()
+        data = {
+            'status': 1,
+            'message': 'OrderFeedback deleted successfully.'
+        }
+        return Response(data, status=status.HTTP_204_NO_CONTENT)

@@ -24,7 +24,9 @@ urlpatterns = [
     path('farmcart/', FarmCartAPIView.as_view(), name='formcart'),
     path('farm-orders/', FarmOrderCreateAPIView.as_view(), name='farm-order-create'),
      path('farm_order_feedback/', FarmOrderFeedbackAPIView.as_view(), name='farm_order_feedback_api'),
+     path('farm-order-feedback/<int:pk>/', FarmOrderFeedbackDetailAPIView.as_view(), name='farm-order-feedback-detail'),
      path('order_feedback/', OrderFeedbackAPIView.as_view(), name='order_feedback_api'),
+     path('order-feedback/<int:pk>/', OrderFeedbackDetailAPIView.as_view(), name='order-feedback-detail'),
 
     
 
