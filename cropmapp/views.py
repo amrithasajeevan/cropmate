@@ -72,46 +72,69 @@ class PredictDisease(APIView):
     def post(self, request, format=None):
         serializer = UploadImageSerializer(data=request.data)
         if serializer.is_valid():
-            # Save the uploaded image
-            image_instance = serializer.save()
+            try:
+                # Save the uploaded image
+                image_instance = serializer.save()
 
-            # Load the Keras model
-            model = load_model(r"C:\Users\User\cropmate\cropmate\keras_model.h5", compile=False)
-            
-            # Load the labels
-            class_names = open(r"C:\Users\User\cropmate\cropmate\labels.txt", "r").readlines()
+                # Load the Keras model
+                model = load_model(r"C:\Users\User\cropmate\cropmate\keras_model.h5", compile=False)
+                
+                # Load the labels
+                class_names = open(r"C:\Users\User\cropmate\cropmate\labels.txt", "r").readlines()
 
-            # Get the image path from the saved instance
-            image_path = image_instance.image.path
+                # Get the image path from the saved instance
+                image_path = image_instance.image.path
 
-            # Load and preprocess the image
-            image = Image.open(image_path).convert("RGB")
-            size = (224, 224)
-            image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
-            image_array = np.asarray(image)
-            normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
-            data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-            data[0] = normalized_image_array
+                # Load and preprocess the image
+                image = Image.open(image_path).convert("RGB")
+                size = (224, 224)
+                image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
+                image_array = np.asarray(image)
+                normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
+                data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
+                data[0] = normalized_image_array
 
-            # Make the prediction
-            prediction = model.predict(data)
-            index = np.argmax(prediction)
-            class_name = class_names[index].strip()  # Remove leading/trailing whitespaces
-            confidence_score = prediction[0][index]
-            
-            # Get the solution based on the predicted class name
-            solution = solutions.get(class_name, "No solution available.")
+                # Make the prediction
+                prediction = model.predict(data)
+                index = np.argmax(prediction)
+                class_name = class_names[index].strip()  # Remove leading/trailing whitespaces
+                confidence_score = prediction[0][index]
+                
+                # Get the solution based on the predicted class name
+                solution = solutions.get(class_name, "No solution available.")
 
-            # Return the prediction and solution
-            response_data = {
-                "class_name": class_name,
-                "confidence_score": float(confidence_score),
-                "solution": solution,
-            }
+                # Define status (1 for success, 0 for failure)
+                status_code = 1
 
-            return Response(response_data, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                # Return the prediction and solution
+                response_data = {
+                    "status": status_code,
+                    "data": {
+                        "class_name": class_name,
+                        "confidence_score": float(confidence_score),
+                        "solution": solution,
+                    }
+                }
+
+                return Response(response_data, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                # Handle any exceptions and set status to 0 for failure
+                status_code = 0
+                error_message = str(e)
+                response_data = {
+                    "status": status_code,
+                    "error": error_message
+                }
+                return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # If serializer is not valid, return status 0
+        response_data = {
+            "status": 0,
+            "error": "Invalid input data"
+        }
+        return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
         
 
 #Admin login
@@ -128,25 +151,35 @@ class SuperuserLoginView(APIView):
         password = serializer.validated_data.get('password')
 
         if not username or not password:
-            return Response({'error': 'Both username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': 0, 'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = authenticate(request, username=username, password=password)
 
         if user and user.is_superuser:
+            # Invalidate any existing tokens
+            Token.objects.filter(user=user).delete()
+
+            # Create a new token
+            token, created = Token.objects.get_or_create(user=user)
+
             # Include superuser details in the response
             superuser_data = {
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                
             }
 
-            # Using Django's Token model to generate a normal token
-            token, created = Token.objects.get_or_create(user=user)
+            response_data = {
+                'token': token.key,
+                'status': 1,
+                'data': superuser_data,
+                'message': "Logged in successfully",
+            }
 
-            return Response({'token': token.key, 'superuser': superuser_data, 'message': "Logged in successfully"}, status=status.HTTP_200_OK)
+            return Response(response_data, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Invalid credentials or user is not a superuser'}, status=status.HTTP_401_UNAUTHORIZED)
+            response_data = {'status': 0, 'error': 'Invalid credentials or user is not a superuser'}
+            return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
 
 
 #forgot password
@@ -236,7 +269,7 @@ class SchemeListCreateView(APIView):
         serializer = SchemeSerializer(data=mutable_data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({'status':1,'data':serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
@@ -252,13 +285,13 @@ class SchemeUpdateDelete(APIView):
     def get(self,request,**kwargs):
         scheme=SchemeAdd.objects.get(id=kwargs.get('pk'))
         a=SchemeSerializer(scheme)
-        return Response(a.data)
+        return Response({'status':1,'data':a.data})
     def put(self,request,**kwargs):
         scheme=SchemeAdd.objects.get(id=kwargs.get('pk'))
         a=SchemeSerializer(instance=scheme,data=request.data)
         if a.is_valid():
             a.save()
-        return Response(a.data)
+        return Response({'status':1,'data':a.data})
     def delete(self,request,**kwargs):
         scheme=SchemeAdd.objects.get(id=kwargs.get('pk'))
         scheme.delete()
@@ -290,10 +323,11 @@ class CropRecommendationAPIView(APIView):
             scaled_input = scaler.transform(input_data)
             result = model.predict(scaled_input)[0]
 
-            return Response({"The crop suitable for the condition": result}, status=status.HTTP_200_OK)
+            return Response({'status':1,'data':{"The crop suitable for the condition": result}}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            response_data = {'status': 0, 'error': str(e)}
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 
@@ -320,13 +354,13 @@ class EquipmentListCreateView(APIView):
         serializer = EquipementAddSerializer(data=mutable_data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status':1,'data':serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({'status':0,'error':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
         qs = EquipmentAdd.objects.all()
         serializer = EquipementAddSerializer(qs, many=True)
-        return Response(serializer.data)
+        return Response({'status':1,'data':serializer.data})
     
 
 #Equipment delete,update,retrive
@@ -341,7 +375,7 @@ class EquipmentUpdateDelete(APIView):
     def get(self, request, **kwargs):
         equipment = EquipmentAdd.objects.get(id=kwargs.get('pk'))
         serializer = EquipementAddSerializer(equipment)
-        return Response(serializer.data)
+        return Response({'status':1,'data':serializer.data})
 
     def put(self, request, **kwargs):
         equipment = EquipmentAdd.objects.get(id=kwargs.get('pk'))
@@ -363,8 +397,8 @@ class EquipmentUpdateDelete(APIView):
         serializer = EquipementAddSerializer(instance=equipment, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status':1,'data':serializer.data})
+        return Response({'status':0,'error':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, **kwargs):
         equipment = EquipmentAdd.objects.get(id=kwargs.get('pk'))
@@ -384,15 +418,15 @@ class EquipmentAddApiView(APIView):
             # If no ID is provided, return a list of all equipment
             equipment_data = EquipmentAdd.objects.all()
             serializer = EquipmentViewSerializer(equipment_data, many=True)
-            return Response({'equipment_details': serializer.data}, status=status.HTTP_200_OK)
+            return Response({'status':1,'data': serializer.data}, status=status.HTTP_200_OK)
         else:
             # If an ID is provided, return details for the specific equipment
             equipment_instance = self.get_object(pk)
             if equipment_instance:
                 serializer = EquipmentViewSerializer(equipment_instance)
-                return Response({'equipment_details': serializer.data}, status=status.HTTP_200_OK)
+                return Response({'status':1,'data': serializer.data}, status=status.HTTP_200_OK)
             else:
-                return Response({'error': 'Equipment not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'status':0,'error': 'Equipment not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 
@@ -406,13 +440,13 @@ class RegistrationView(APIView):
             serializer.save()
             return Response({'msg': 'Registration successful'}, status=status.HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status':0,'error':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     def get(self,request):
         qs=CustomUser.objects.all()
         
         a=RegistrationSerializer(qs,many=True)
         
-        return Response(a.data)
+        return Response({'status':1,'data':a.data})
 
 
 #login for farmer and user
@@ -443,11 +477,11 @@ class UnifiedLoginView(APIView):
                     'location': user.location,
                 }
 
-                return Response({'token': token.key, 'user': user_data, 'msg': 'Login successful'}, status=200)
+                return Response({'token': token.key, 'status':1,'data': user_data, 'msg': 'Login successful'}, status=200)
             else:
                 return Response({'msg': 'Invalid credentials'}, status=401)
         else:
-            return Response(serializer.errors, status=400)
+            return Response({'status':0,'error':serializer.errors}, status=400)
     
 
             
@@ -460,7 +494,7 @@ class UserSchemeListView(APIView):
     def get(self, request):
         qs = SchemeAdd.objects.all()
         serializer = UserSchemeSerializer(qs, many=True)
-        return Response(serializer.data)
+        return Response({'status':1,'data':serializer.data})
     
 
 #view specific schema
@@ -475,7 +509,7 @@ class UserSchemeDetailView(APIView):
             return Response({"error": "Scheme not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = UserSchemeSerializer(scheme)
-        return Response(serializer.data)
+        return Response({'status':1,'data':serializer.data})
     
 #admin view all the user /farmer details
     
@@ -485,7 +519,7 @@ class UserListView(APIView):
     def get(self, request, *args, **kwargs):
         users = CustomUser.objects.filter(is_superuser=False)
         serializer = RegistrationSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({'status':1,'data':serializer.data}, status=status.HTTP_200_OK)
     
 
 
@@ -541,10 +575,14 @@ class AddToCartAPIView(APIView):
             total_quantity_bought = sum(item.quantity for item in cart_items)
 
             return Response({
+                
                 'message': 'Item added to cart successfully.',
+                'status':1,
+                'data':{
                 'items': items_list,
                 'total_price': total_price,
                 'total_quantity_bought': total_quantity_bought
+                },
             }, status=status.HTTP_201_CREATED)
 
         except EquipmentAdd.DoesNotExist:
