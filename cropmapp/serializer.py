@@ -77,7 +77,10 @@ class UnifiedLoginSerializer(serializers.Serializer):
 
         return data
 
-
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id','user_type', 'username', 'email', 'phone', 'address', 'location']
 
 class UserSchemeSerializer(serializers.ModelSerializer):
     class Meta:
